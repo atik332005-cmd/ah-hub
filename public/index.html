@@ -1,0 +1,243 @@
+<!DOCTYPE html><html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#07111f">
+<meta name="description" content="AH Hub — Apps, PDFs, Documents and Tools. Download Anytime, Anywhere.">
+<title>AH Hub | Download Anytime, Anywhere</title>
+<style>
+:root{--bg:#07111f;--panel:#102139;--line:#29415e;--cyan:#00d5ff;--text:#f4f8ff;--muted:#b8c7da}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,sans-serif}
+header{text-align:center;padding:30px 15px;background:linear-gradient(135deg,#102139,#0a1729);border-bottom:2px solid var(--cyan)}
+.logo{display:inline-flex;width:76px;height:76px;align-items:center;justify-content:center;border:2px solid var(--cyan);border-radius:22px;color:var(--cyan);font-size:36px;font-weight:900}
+header h1{margin:12px 0 5px;font-size:32px}
+header p{color:var(--muted);margin:8px}
+.creator{font-size:13px;color:var(--cyan);margin-top:12px}
+main{width:min(1000px,100%);margin:auto;padding:20px 15px}
+h2{font-size:21px}
+input,select{width:100%;padding:13px;margin:7px 0;border:1px solid var(--line);border-radius:9px;background:#0b1a2d;color:white;font-size:15px}
+button,.download{display:inline-block;padding:11px 15px;border:0;border-radius:8px;background:var(--cyan);color:#06111c;font-weight:bold;text-decoration:none;cursor:pointer}
+button:active,.download:active{opacity:.8}
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin:15px 0}
+.filters button{background:#18314d;color:white;border:1px solid var(--line)}
+.filters button.active{background:var(--cyan);color:#06111c}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.card{padding:17px;background:var(--panel);border:1px solid var(--line);border-radius:13px;overflow-wrap:anywhere}
+.card h3{margin-top:0}
+.tag{font-size:13px;color:var(--cyan)}
+.description{color:var(--muted);line-height:1.5}
+.muted{color:var(--muted);font-size:14px;line-height:1.6}
+.panel{padding:18px;background:var(--panel);border:1px solid var(--line);border-radius:13px;margin-top:30px}
+.hidden{display:none!important}
+.message{font-size:14px;overflow-wrap:anywhere}
+footer{text-align:center;padding:24px;color:var(--muted);border-top:1px solid var(--line);margin-top:25px}
+</style>
+</head>
+<body><header>
+  <div class="logo">AH</div>
+  <h1>AH Hub</h1>
+  <p>Download Anytime, Anywhere</p>
+  <div class="creator">Created by ABU HASAN</div>
+</header><main>
+  <section>
+    <h2>ফাইল ও অ্যাপ খুঁজুন</h2>
+    <input id="search" type="search" placeholder="নাম লিখে খুঁজুন..." aria-label="ফাইল খুঁজুন">
+    <div class="filters">
+      <button class="active" data-category="All">সব ফাইল</button>
+      <button data-category="Apps">Apps</button>
+      <button data-category="PDF">PDF</button>
+      <button data-category="Documents">Documents</button>
+      <button data-category="Tools">Tools</button>
+    </div>
+    <div id="files" class="grid"></div>
+    <p id="empty" class="muted">এখনো কোনো ফাইল আপলোড করা হয়নি।</p>
+    <p id="loadMessage" class="muted"></p>
+  </section>  <section class="panel">
+    <h2>🔐 অ্যাডমিন লগইন</h2>
+    <p class="muted">ওয়েবসাইটের অনুমোদিত অ্যাডমিন এখানে লগইন করতে পারবেন।</p>
+    <form id="loginForm">
+      <input id="username" autocomplete="username" placeholder="Admin username" required>
+      <input id="password" type="password" autocomplete="current-password" placeholder="Admin password" required>
+      <button type="submit">লগইন</button>
+    </form>
+    <p id="loginMessage" class="message" aria-live="polite"></p>
+  </section>  <section id="adminPanel" class="panel hidden">
+    <h2>📤 নতুন ফাইল আপলোড</h2>
+    <form id="uploadForm">
+      <label>ফাইলের নাম
+        <input name="name" maxlength="120" placeholder="যেমন: My Application" required>
+      </label>
+      <label>বিবরণ
+        <input name="description" maxlength="500" placeholder="ফাইল সম্পর্কে সংক্ষিপ্ত বিবরণ">
+      </label>
+      <label>ক্যাটাগরি
+        <select name="category">
+          <option value="Apps">Apps</option>
+          <option value="PDF">PDF</option>
+          <option value="Documents">Documents</option>
+          <option value="Tools">Tools</option>
+        </select>
+      </label>
+      <label>ফাইল নির্বাচন
+        <input name="file" type="file" required>
+      </label>
+      <button type="submit">ফাইল আপলোড করুন</button>
+    </form>
+    <p class="muted">সার্ভারে অনুমোদিত ফাইলের ধরন ও সর্বোচ্চ সাইজের সীমা প্রযোজ্য হবে।</p>
+    <p id="uploadMessage" class="message" aria-live="polite"></p>
+    <button id="logoutButton" type="button">লগআউট</button>
+  </section>
+</main><footer>
+  <p>© 2026 AH Hub</p>
+  <p>Created by ABU HASAN</p>
+</footer><script>
+"use strict";
+
+let allFiles = [];
+let activeCategory = "All";
+
+const searchInput = document.getElementById("search");
+const filesBox = document.getElementById("files");
+const emptyMessage = document.getElementById("empty");
+const loadMessage = document.getElementById("loadMessage");
+const loginMessage = document.getElementById("loginMessage");
+const uploadMessage = document.getElementById("uploadMessage");
+const adminPanel = document.getElementById("adminPanel");
+
+document.querySelectorAll("[data-category]").forEach(button => {
+  button.addEventListener("click", () => {
+    activeCategory = button.dataset.category;
+    document.querySelectorAll("[data-category]").forEach(item => {
+      item.classList.toggle("active", item === button);
+    });
+    renderFiles();
+  });
+});
+
+searchInput.addEventListener("input", renderFiles);
+
+function makeElement(tag, className, text) {
+  const element = document.createElement(tag);
+  if (className) element.className = className;
+  if (text !== undefined) element.textContent = text;
+  return element;
+}
+
+function renderFiles() {
+  const query = searchInput.value.trim().toLowerCase();
+  const filtered = allFiles.filter(file => {
+    const categoryMatches = activeCategory === "All" ||
+      file.category === activeCategory;
+    const textMatches =
+      String(file.name || "").toLowerCase().includes(query) ||
+      String(file.description || "").toLowerCase().includes(query);
+    return categoryMatches && textMatches;
+  });
+
+  filesBox.replaceChildren();
+  emptyMessage.classList.toggle("hidden", filtered.length > 0);
+
+  filtered.forEach(file => {
+    const card = makeElement("article", "card");
+    card.appendChild(makeElement("h3", "", file.name || "নামহীন ফাইল"));
+    card.appendChild(makeElement("p", "tag", file.category || "Files"));
+    card.appendChild(makeElement("p", "description", file.description || ""));
+
+    if (Number(file.size) > 0) {
+      card.appendChild(makeElement("p", "muted",
+        (Number(file.size) / 1024 / 1024).toFixed(2) + " MB"));
+    }
+
+    const link = makeElement("a", "download", "ডাউনলোড করুন");
+    link.href = "/download/" + encodeURIComponent(file.id);
+    card.appendChild(link);
+    filesBox.appendChild(card);
+  });
+}
+
+async function loadFiles() {
+  loadMessage.textContent = "ফাইল লোড হচ্ছে...";
+  try {
+    const response = await fetch("/api/files");
+    if (!response.ok) throw new Error("ফাইল লোড করা যায়নি।");
+    const data = await response.json();
+    allFiles = Array.isArray(data) ? data : [];
+    loadMessage.textContent = "";
+  } catch (error) {
+    allFiles = [];
+    loadMessage.textContent = "সার্ভার চালু হলে ফাইলের তালিকা দেখা যাবে।";
+  }
+  renderFiles();
+}
+
+document.getElementById("loginForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  loginMessage.textContent = "লগইন হচ্ছে...";
+
+  try {
+    const response = await fetch("/api/admin/login", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        username: document.getElementById("username").value,
+        password: document.getElementById("password").value
+      })
+    });
+
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || "লগইন সফল হয়নি।");
+
+    adminPanel.classList.remove("hidden");
+    loginMessage.textContent = "লগইন সফল হয়েছে।";
+    document.getElementById("password").value = "";
+  } catch (error) {
+    loginMessage.textContent = error.message;
+  }
+});
+
+document.getElementById("uploadForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  uploadMessage.textContent = "ফাইল আপলোড হচ্ছে...";
+
+  try {
+    const formData = new FormData(event.target);
+    const response = await fetch("/api/admin/upload", {
+      method: "POST",
+      body: formData
+    });
+
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || "আপলোড সফল হয়নি।");
+
+    uploadMessage.textContent = "ফাইল সফলভাবে আপলোড হয়েছে।";
+    event.target.reset();
+    await loadFiles();
+  } catch (error) {
+    uploadMessage.textContent = error.message;
+  }
+});
+
+document.getElementById("logoutButton").addEventListener("click", async () => {
+  try {
+    await fetch("/api/admin/logout", {method: "POST"});
+  } finally {
+    adminPanel.classList.add("hidden");
+    loginMessage.textContent = "লগআউট হয়েছে।";
+  }
+});
+
+async function checkAdminStatus() {
+  try {
+    const response = await fetch("/api/admin/status");
+    const result = await response.json();
+    adminPanel.classList.toggle("hidden", !result.loggedIn);
+  } catch (_) {
+    adminPanel.classList.add("hidden");
+  }
+}
+
+loadFiles();
+checkAdminStatus();
+</script></body>
+</html>
